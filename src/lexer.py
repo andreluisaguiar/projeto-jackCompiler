@@ -68,3 +68,17 @@ class JackLexer:
             self._tokens.append(Token(TokenType.KEYWORD, word))
         else:
             self._tokens.append(Token(TokenType.IDENTIFIER, word))
+
+    SYMBOLS = set('{}()[].,;+-*/&|<>=~')
+
+    def _read_symbol(self):
+        ch = self._source[self._pos]
+        self._tokens.append(Token(TokenType.SYMBOL, ch))
+        self._pos += 1
+
+    def _read_next_token(self):
+        ch = self._source[self._pos]
+        if ch in SYMBOLS:
+            self._read_symbol()
+        elif ch.isalpha() or ch == '_':
+            self._read_word()
