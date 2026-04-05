@@ -38,3 +38,33 @@ class Token:
         for ch in text:
             result.append(XML_ESCAPE.get(ch, ch))
         return ''.join(result)
+  
+class LexerError(Exception):
+    def __init__(self, message: str, line: int):
+        super().__init__(f"Line {line}: {message}")
+        self.line = line
+
+class JackLexer:
+    def __init__(self, source: str):
+        self._source = source  # strip de comentários virá depois
+        self._pos = 0
+        self._line = 1
+        self._tokens: list[Token] = []
+
+    def _skip_whitespace(self):
+        while self._pos < len(self._source) and self._source[self._pos] in ' \t\r\n':
+            if self._source[self._pos] == '\n':
+                self._line += 1
+            self._pos += 1
+
+    def _read_word(self):
+        start = self._pos
+        while self._pos < len(self._source) and (
+            self._source[self._pos].isalnum() or self._source[self._pos] == '_'
+        ):
+            self._pos += 1
+        word = self._source[start:self._pos]
+        if word in KEYWORDS:
+            self._tokens.append(Token(TokenType.KEYWORD, word))
+        else:
+            self._tokens.append(Token(TokenType.IDENTIFIER, word))
