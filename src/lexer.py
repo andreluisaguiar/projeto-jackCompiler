@@ -27,3 +27,14 @@ class Token:
 
     def __repr__(self):
         return f"Token({self.token_type.name}, {self.value!r})"
+    
+    def to_xml(self) -> str:
+        tag = TAG_NAME[self.token_type]
+        escaped = self._escape(self.value)
+        return f"<{tag}> {escaped} </{tag}>"
+
+    def _escape(self, text: str) -> str:
+        result = []
+        for ch in text:
+            result.append(XML_ESCAPE.get(ch, ch))
+        return ''.join(result)
