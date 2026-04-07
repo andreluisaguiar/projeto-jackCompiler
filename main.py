@@ -17,3 +17,17 @@ def principal():
     arquivo_entrada = sys.argv[1]
     arquivo_saida = sys.argv[2] if len(sys.argv) > 2 else None
     
+    try:
+        processar_arquivo_jack(arquivo_entrada, arquivo_saida)
+        print("Tokenização concluída com sucesso!")
+        
+    except FileNotFoundError:
+        print(f"Erro: Arquivo não encontrado: {arquivo_entrada}")
+        sys.exit(1)
+        
+    except Exception as erro:
+        print(f"Erro durante a tokenização: {erro}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    principal()
