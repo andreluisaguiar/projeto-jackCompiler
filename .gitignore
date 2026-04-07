@@ -1,0 +1,6 @@
+__pycache__/
+__pycache__
+*.py[cod]
+output/
+src/__pycache__
+tests/__pycache__
