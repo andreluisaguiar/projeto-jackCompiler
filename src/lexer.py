@@ -125,3 +125,54 @@ class JackLexer:
             self._read_word()
         else:
             raise LexerError(f"Unexpected character: {ch!r}", self._line)
+
+    def _skip_whitespace_and_comments(self):
+        while self._pos < len(self._source):
+            ch = self._source[self._pos]
+            if ch in ' \t\r\n':
+                if ch == '\n': self._line += 1
+                self._pos += 1
+                continue
+            if ch == '/' and self._pos + 1 < len(self._source) and self._source[self._pos + 1] == '/':
+                while self._pos < len(self._source) and self._source[self._pos] != '\n':
+                    self._pos += 1
+                continue
+            if ch == '/' and self._pos + 1 < len(self._source) and self._source[self._pos + 1] == '*':
+                self._pos += 2
+                while self._pos + 1 < len(self._source):
+                    if self._source[self._pos] == '*' and self._source[self._pos + 1] == '/':
+                        self._pos += 2
+                        break
+                    if self._source[self._pos] == '\n': self._line += 1
+                    self._pos += 1
+                continue
+            break
+
+    def _read_next_token(self):
+        self._skip_whitespace_and_comments()
+        if self._pos >= len(self._source):
+            return False
+        ch = self._source[self._pos]
+        if ch == '"':
+            self._read_string()
+        elif ch.isdigit():
+            self._read_integer()
+        elif ch in SYMBOLS:
+            self._read_symbol()
+        elif ch.isalpha() or ch == '_':
+            self._read_word()
+        else:
+            raise LexerError(f"Unexpected character: {ch!r}", self._line)
+        return True
+
+    def tokenize(self) -> list[Token]:
+        while self._read_next_token():
+            pass
+        return self._tokens
+
+    def to_xml(self) -> str:
+        lines = ['<tokens>']
+        for token in self._tokens:
+            lines.append(token.to_xml())
+        lines.append('</tokens>')
+        return '\n'.join(lines)    
