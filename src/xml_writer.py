@@ -16,4 +16,4 @@ def escrever_xml(conteudo: str, caminho_saida: str):
     
     with open(caminho_saida, 'w', encoding='utf-8') as arquivo:
         arquivo.write(conteudo)
-        arquivo.write('\n')  # Nova linha final conforme padrão oficial
+        arquivo.write('\n')
