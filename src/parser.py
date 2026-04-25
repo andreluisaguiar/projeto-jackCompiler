@@ -231,7 +231,6 @@ class JackParser:
         self.consume_and_write(TokenType.SYMBOL, '}')
         
         self.write_end("whileStatement")
-        
     def compile_do(self):
         """doStatement: 'do' subroutineCall ';'"""
         self.write_start("doStatement")
@@ -244,13 +243,14 @@ class JackParser:
 
     def _compile_subroutine_call(self):
         """Helper: subroutineCall: identifier ('.' identifier)? '(' expressionList ')'"""
+
         self.consume_and_write(TokenType.IDENTIFIER)
      
         if self.match(TokenType.SYMBOL, '.'):
             self.consume_and_write(TokenType.IDENTIFIER, description="subroutine name")
         
         self.consume_and_write(TokenType.SYMBOL, '(')
-        
+        self.compile_expression_list()  
         self.consume_and_write(TokenType.SYMBOL, ')')
 
     def compile_return(self):
@@ -267,3 +267,53 @@ class JackParser:
         self.consume_and_write(TokenType.SYMBOL, ';')
         
         self.write_end("returnStatement")
+
+
+    def compile_expression(self):
+        """expression: term (op term)*
+        Binary ops: + - * / & | < > = (all same precedence in Jack)
+        """
+        self.compile_term()
+        
+        while self.check(TokenType.SYMBOL) and self.peek().value in '+-*/&|<=>':
+            op_token = self.advance()
+            self.write_token(op_token) 
+            self.compile_term()
+
+    def compile_term(self):
+        """term: integerConstant | stringConstant | keywordConstant | 
+                 varName | '(' expression ')' | unaryOp term
+        """
+        self.write_start("term")
+        
+        token = self.peek()
+        if token is None:
+            raise ParserError("Expected term, found end of input", 
+                            *self._eof_position())
+
+        if self.check(TokenType.SYMBOL, '-') or self.check(TokenType.SYMBOL, '~'):
+            self.consume_and_write(TokenType.SYMBOL)
+            self.compile_term()  
+            
+
+        elif self.match(TokenType.SYMBOL, '('):
+            self.write_start("expression")
+            self.compile_expression()
+            self.write_end("expression")
+            self.consume_and_write(TokenType.SYMBOL, ')')
+            
+        elif self.check(TokenType.INTEGER_CONSTANT):
+            self.consume_and_write(TokenType.INTEGER_CONSTANT)
+        elif self.check(TokenType.STRING_CONSTANT):
+            self.consume_and_write(TokenType.STRING_CONSTANT)
+        elif self.check(TokenType.KEYWORD) and token.value in ('true', 'false', 'null', 'this'):
+            self.consume_and_write(TokenType.KEYWORD)
+            
+        elif self.check(TokenType.IDENTIFIER):
+            self.consume_and_write(TokenType.IDENTIFIER)
+            
+        else:
+            raise ParserError(f"Unexpected token in term: {token.value}", 
+                            token.line, token.column)
+        
+        self.write_end("term")
