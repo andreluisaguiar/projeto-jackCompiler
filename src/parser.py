@@ -231,3 +231,39 @@ class JackParser:
         self.consume_and_write(TokenType.SYMBOL, '}')
         
         self.write_end("whileStatement")
+        
+    def compile_do(self):
+        """doStatement: 'do' subroutineCall ';'"""
+        self.write_start("doStatement")
+        
+        self.consume_and_write(TokenType.KEYWORD, 'do')
+        self._compile_subroutine_call()
+        self.consume_and_write(TokenType.SYMBOL, ';')
+        
+        self.write_end("doStatement")
+
+    def _compile_subroutine_call(self):
+        """Helper: subroutineCall: identifier ('.' identifier)? '(' expressionList ')'"""
+        self.consume_and_write(TokenType.IDENTIFIER)
+     
+        if self.match(TokenType.SYMBOL, '.'):
+            self.consume_and_write(TokenType.IDENTIFIER, description="subroutine name")
+        
+        self.consume_and_write(TokenType.SYMBOL, '(')
+        
+        self.consume_and_write(TokenType.SYMBOL, ')')
+
+    def compile_return(self):
+        """returnStatement: 'return' expression? ';'"""
+        self.write_start("returnStatement")
+        
+        self.consume_and_write(TokenType.KEYWORD, 'return')
+        
+        if not self.check(TokenType.SYMBOL, ';'):
+            self.write_start("expression")
+            self.compile_expression()
+            self.write_end("expression")
+        
+        self.consume_and_write(TokenType.SYMBOL, ';')
+        
+        self.write_end("returnStatement")
