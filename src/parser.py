@@ -168,3 +168,23 @@ class JackParser:
                 break
         
         self.write_end("statements")    
+
+    def compile_let(self):
+        """letStatement: 'let' varName ('[' expression ']')? '=' expression ';'"""
+        self.write_start("letStatement")
+        
+        self.consume_and_write(TokenType.KEYWORD, 'let')
+        self.consume_and_write(TokenType.IDENTIFIER, description="variable name")
+        
+        if self.match(TokenType.SYMBOL, '['):
+            self.write_start("expression")
+            self.compile_expression()  
+            self.write_end("expression")
+            self.consume_and_write(TokenType.SYMBOL, ']')
+ 
+        self.consume_and_write(TokenType.SYMBOL, '=')
+        self.write_start("expression")
+        self.compile_expression()
+        self.write_end("expression")
+        self.consume_and_write(TokenType.SYMBOL, ';')
+        self.write_end("letStatement")
