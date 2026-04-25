@@ -167,7 +167,18 @@ class JackParser:
             else:
                 break
         
-        self.write_end("statements")    
+        self.write_end("statements") 
+
+    def compile_expression(self):
+        """expression: term (op term)*
+        Binary ops: + - * / & | < > = (all same precedence in Jack)
+        """
+        self.compile_term()
+        
+        while self.check(TokenType.SYMBOL) and self.peek().value in '+-*/&|<=>':
+            op_token = self.advance()
+            self.write_token(op_token) 
+            self.compile_term()
 
     def compile_let(self):
         """letStatement: 'let' varName ('[' expression ']')? '=' expression ';'"""
@@ -268,21 +279,10 @@ class JackParser:
         
         self.write_end("returnStatement")
 
-
-    def compile_expression(self):
-        """expression: term (op term)*
-        Binary ops: + - * / & | < > = (all same precedence in Jack)
-        """
-        self.compile_term()
-        
-        while self.check(TokenType.SYMBOL) and self.peek().value in '+-*/&|<=>':
-            op_token = self.advance()
-            self.write_token(op_token) 
-            self.compile_term()
-
     def compile_term(self):
         """term: integerConstant | stringConstant | keywordConstant | 
-                 varName | '(' expression ')' | unaryOp term
+                 varName | varName '[' expression ']' | 
+                 subroutineCall | '(' expression ')' | unaryOp term
         """
         self.write_start("term")
         
@@ -290,12 +290,11 @@ class JackParser:
         if token is None:
             raise ParserError("Expected term, found end of input", 
                             *self._eof_position())
-
+        
         if self.check(TokenType.SYMBOL, '-') or self.check(TokenType.SYMBOL, '~'):
             self.consume_and_write(TokenType.SYMBOL)
-            self.compile_term()  
+            self.compile_term()
             
-
         elif self.match(TokenType.SYMBOL, '('):
             self.write_start("expression")
             self.compile_expression()
@@ -308,12 +307,44 @@ class JackParser:
             self.consume_and_write(TokenType.STRING_CONSTANT)
         elif self.check(TokenType.KEYWORD) and token.value in ('true', 'false', 'null', 'this'):
             self.consume_and_write(TokenType.KEYWORD)
-            
+        
         elif self.check(TokenType.IDENTIFIER):
-            self.consume_and_write(TokenType.IDENTIFIER)
+            identifier = self.advance()
+            self.write_token(identifier)
             
+            next_sym = self.peek()
+
+            if self.match(TokenType.SYMBOL, '['):
+                self.write_start("expression")
+                self.compile_expression()
+                self.write_end("expression")
+                self.consume_and_write(TokenType.SYMBOL, ']')
+            
+            elif self.check(TokenType.SYMBOL, '(') or self.check(TokenType.SYMBOL, '.'):
+                if self.match(TokenType.SYMBOL, '.'):
+                    self.consume_and_write(TokenType.IDENTIFIER, description="subroutine name")
+                self.consume_and_write(TokenType.SYMBOL, '(')
+                self.compile_expression_list()
+                self.consume_and_write(TokenType.SYMBOL, ')')
+                
         else:
             raise ParserError(f"Unexpected token in term: {token.value}", 
                             token.line, token.column)
         
         self.write_end("term")
+
+    def compile_expression_list(self):
+        """expressionList: (expression (',' expression)*)?"""
+        self.write_start("expressionList")
+        
+        if not self.check(TokenType.SYMBOL, ')'):
+            self.write_start("expression")
+            self.compile_expression()
+            self.write_end("expression")
+            
+            while self.match(TokenType.SYMBOL, ','):
+                self.write_start("expression")
+                self.compile_expression()
+                self.write_end("expression")
+        
+        self.write_end("expressionList")
