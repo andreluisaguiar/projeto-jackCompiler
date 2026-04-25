@@ -141,3 +141,30 @@ class JackParser:
         if value is None:
             return token_type.name
         return f"{token_type.name} {value!r}"
+
+    def compile_statements(self):
+        """statements: statement*
+        statement: letStatement | ifStatement | whileStatement | doStatement | returnStatement
+        """
+        self.write_start("statements")
+        
+        while not self.is_at_end():
+            if self.check(TokenType.SYMBOL, '}'):
+                break
+            if self.check(TokenType.SYMBOL, ')'):  
+                break
+   
+            if self.check(TokenType.KEYWORD, 'let'):
+                self.compile_let()
+            elif self.check(TokenType.KEYWORD, 'if'):
+                self.compile_if()
+            elif self.check(TokenType.KEYWORD, 'while'):
+                self.compile_while()
+            elif self.check(TokenType.KEYWORD, 'do'):
+                self.compile_do()
+            elif self.check(TokenType.KEYWORD, 'return'):
+                self.compile_return()
+            else:
+                break
+        
+        self.write_end("statements")    
