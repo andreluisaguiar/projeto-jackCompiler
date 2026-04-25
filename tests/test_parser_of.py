@@ -40,16 +40,16 @@ class TestParserOfficialFiles(unittest.TestCase):
         xml_filename = jack_filename.replace('.jack', '.xml')
         xml_path = self.SQUARE_DIR / xml_filename
         
-        self.assertTrue(jack_path.exists(), f"❌ Jack não encontrado: {jack_path}")
-        self.assertTrue(xml_path.exists(), f"❌ XML oficial não encontrado: {xml_path}")
+        self.assertTrue(jack_path.exists(), f"Jack não encontrado: {jack_path}")
+        self.assertTrue(xml_path.exists(), f"XML oficial não encontrado: {xml_path}")
         
         generated = normalize_for_comparison(parse_jack_file(str(jack_path)))
         reference = normalize_for_comparison(xml_path.read_text(encoding='utf-8'))
         
         self.assertEqual(
             generated, reference,
-            f"❌ Diferença estrutural em {jack_filename}\n"
-            f"💡 Execute: diff -w output/{xml_filename} {xml_path} para detalhes"
+            f"Diferença estrutural em {jack_filename}\n"
+            f"Execute: diff -w output/{xml_filename} {xml_path} para detalhes"
         )
     
     def test_main_official(self):
