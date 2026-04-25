@@ -188,3 +188,46 @@ class JackParser:
         self.write_end("expression")
         self.consume_and_write(TokenType.SYMBOL, ';')
         self.write_end("letStatement")
+
+    def compile_if(self):
+        """ifStatement: 'if' '(' expression ')' '{' statements '}' ('else' '{' statements '}')?"""
+        self.write_start("ifStatement")
+        
+        self.consume_and_write(TokenType.KEYWORD, 'if')
+        self.consume_and_write(TokenType.SYMBOL, '(')
+        
+        self.write_start("expression")
+        self.compile_expression() 
+        self.write_end("expression")
+        
+        self.consume_and_write(TokenType.SYMBOL, ')')
+        self.consume_and_write(TokenType.SYMBOL, '{')
+        self.compile_statements()
+        self.consume_and_write(TokenType.SYMBOL, '}')
+        
+        if self.match(TokenType.KEYWORD, 'else'):
+            self.write_start("elseStatement")
+            self.consume_and_write(TokenType.SYMBOL, '{')
+            self.compile_statements()
+            self.consume_and_write(TokenType.SYMBOL, '}')
+            self.write_end("elseStatement")
+        
+        self.write_end("ifStatement")
+
+    def compile_while(self):
+        """whileStatement: 'while' '(' expression ')' '{' statements '}'"""
+        self.write_start("whileStatement")
+        
+        self.consume_and_write(TokenType.KEYWORD, 'while')
+        self.consume_and_write(TokenType.SYMBOL, '(')
+        
+        self.write_start("expression")
+        self.compile_expression()
+        self.write_end("expression")
+        
+        self.consume_and_write(TokenType.SYMBOL, ')')
+        self.consume_and_write(TokenType.SYMBOL, '{')
+        self.compile_statements()
+        self.consume_and_write(TokenType.SYMBOL, '}')
+        
+        self.write_end("whileStatement")
