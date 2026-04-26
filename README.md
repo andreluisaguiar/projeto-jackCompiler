@@ -1,8 +1,8 @@
-# JackCompiler - Analisador Léxico (Tokenizer)
+# JackCompiler - Scanner e Parser Jack
 
 ### Projeto do módulo I da disciplina de Compiladores - Engenharia da Computação/UFMA
 
-Implementação do scanner para a linguagem Jack (projeto nand2tetris)
+Implementação do analisador léxico e do analisador sintático para a linguagem Jack, do projeto nand2tetris.
 
 ## Dupla
 
@@ -15,83 +15,115 @@ Implementação do scanner para a linguagem Jack (projeto nand2tetris)
 
 ## Linguagem utilizada
 
-- **Python 3.10+**
-- Sem dependências externas (biblioteca padrão apenas)
+- Python 3.10+
+- Sem dependências externas
 
 ---
 
-## Estrutura do Projeto
+## Estrutura do projeto
 
+```text
 projeto-jackCompiler/
-```
-├── main.py 
+├── main.py
 ├── src/
-│ ├── init.py
-│ ├── lexer.py # Analisador léxico (JackLexer)
-│ ├── processador.py 
-│ └── xml_writer.py # Escritor de arquivos XML
-├── testes/
-│ ├── init.py
-│ └── test_lexer.py # Testes unitários
-├── Square/ # Arquivos oficiais do nand2tetris 
-│ ├── Main.jack, Square.jack, SquareGame.jack
-│ └── *T.xml (gabaritos oficiais)
-├── output/ # Saída gerada pelo tokenizer
-└── README.md
+│   ├── __init__.py
+│   ├── lexer.py          # Analisador léxico JackLexer
+│   ├── parser.py         # Parser recursive descent JackParser
+│   ├── processador.py    # Integra lexer + parser
+│   └── xml_writer.py     # Escrita dos arquivos XML
+├── tests/
+│   ├── test_lexer.py
+│   ├── test_parser_helpers.py
+│   ├── test_parser_erro.py
+│   ├── test_parser_of.py
+│   └── test_processador.py
+├── Square/
+│   ├── Main.jack, Square.jack, SquareGame.jack
+│   ├── Main.xml, Square.xml, SquareGame.xml
+│   └── MainT.xml, SquareT.xml, SquareGameT.xml
+└── output/
 ```
 
 ---
+
 ## Como executar
 
-### Pré-requisitos
+### Gerar XML sintático do parser
 
-- Python 3.8 ou superior instalado
-- Terminal (PowerShell, CMD ou Bash)
+Por padrão, o programa executa scanner + parser e gera a árvore sintática.
 
-### Passo a passo
+```bash
+python3 main.py Square/Main.jack
+python3 main.py Square/Square.jack
+python3 main.py Square/SquareGame.jack
+```
 
-1. Clone ou baixe o projeto:
-   ```bash
-   git clone <https://github.com/andreluisaguiar/projeto-jackCompiler.git>
-   cd projeto-jackCompiler
-2. Execute o tokenizer:
-    ```bash
-    # Tokenizar um único arquivo (saída automática em output/)
-    python main.py Square/Main.jack
-    # Tokenizar os demais: 
-    python main.py Square/Square.jack
-    python main.py Square/SquareGame.jack
-3. Os arquivos gerados serão salvos em output/:
-    ```
-    output/
-    ├── MainT.xml
-    ├── SquareT.xml
-    └── SquareGameT.xml
-    ```
+Os arquivos gerados serão salvos em `output/`:
+
+```text
+output/Main.xml
+output/Square.xml
+output/SquareGame.xml
+```
+
+Também é possível informar o caminho de saída:
+
+```bash
+python3 main.py Square/Main.jack output/Main.xml
+```
+
+Nome do arquivo de saída XML do parser: `NomeDoArquivo.xml`.
+
+### Gerar XML de tokens do scanner
+
+Para validar apenas o analisador léxico, use `--tokens`:
+
+```bash
+python3 main.py --tokens Square/Main.jack output/MainT.xml
+```
+
+Nome do arquivo de saída XML do scanner: `NomeDoArquivoT.xml`.
+
 ---
+
 ## Como validar
-### Comparação com arquivos oficiais (Windows/PowerShell)
 
-**Comparar Main**:
+### Testes automatizados
+
+```bash
+python3 -m unittest discover -s tests -v
 ```
-fc.exe /L Square\MainT.xml output\MainT.xml
+
+Os testes comparam a saída sintática gerada com os XMLs oficiais:
+
+- `Square/Main.jack` → `Square/Main.xml`
+- `Square/Square.jack` → `Square/Square.xml`
+- `Square/SquareGame.jack` → `Square/SquareGame.xml`
+
+Status atual da validação: os três arquivos oficiais passam nos testes automatizados.
+
+### Comparação manual
+
+```bash
+python3 main.py Square/Main.jack output/Main.xml
+diff -w Square/Main.xml output/Main.xml
 ```
-**Comparar Square**
+
+No Windows/PowerShell:
+
+```powershell
+python main.py Square/Main.jack output/Main.xml
+fc.exe /L Square\Main.xml output\Main.xml
 ```
-fc.exe /L Square\SquareT.xml output\SquareT.xml
-```
-**Comparar SquareGame**
-```
-fc.exe /L Square\SquareGameT.xml output\SquareGameT.xml
-```
-*Se aparecer: "FC: não foram encontradas diferenças" → Validado!*
 
 ---
-## Rodar testes unitários do lexico:
-```
-python -m unittest tests/test_lexer.py -v
-```
-## Rodar teste para tokenização com saída em xml:
-```
-python main.py tests/teste.jack
-```
+
+## Decisões técnicas
+
+O parser foi implementado com recursive descent, usando um método `compile_*` para cada não-terminal relevante da gramática Jack. O lexer foi mantido como etapa inicial do fluxo e agora os tokens carregam linha e coluna, permitindo mensagens de erro sintático mais claras.
+
+A geração XML segue a estrutura esperada pelo nand2tetris. Um cuidado importante foi escrever no XML todos os símbolos consumidos durante o parsing, como `.`, `[`, `]`, `(`, `)`, `,` e os operadores. Outro ponto de atenção foi o `else`, que no XML oficial aparece como keyword dentro de `ifStatement`, sem uma tag extra.
+
+## Desafios enfrentados
+
+Os principais desafios foram integrar o parser sem quebrar o scanner já existente, reproduzir exatamente a hierarquia XML oficial e identificar diferenças sutis causadas por tokens consumidos sem escrita no XML. Também foi necessário separar a saída de tokens (`T.xml`) da saída sintática (`.xml`) para manter as duas validações disponíveis.
