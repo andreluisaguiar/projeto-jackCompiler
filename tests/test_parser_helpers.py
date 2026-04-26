@@ -53,6 +53,18 @@ class TesteParserHelpers(unittest.TestCase):
             "<class>\n  <keyword> class </keyword>\n</class>",
         )
 
+    def test_match_and_write_usa_match_e_preserva_xml(self):
+        parser = JackParser([Token(TokenType.SYMBOL, ",", 1, 1)])
+
+        parser.write_start("expressionList")
+        self.assertTrue(parser.match_and_write(TokenType.SYMBOL, ","))
+        parser.write_end("expressionList")
+
+        self.assertEqual(
+            parser.output(),
+            "<expressionList>\n  <symbol> , </symbol>\n</expressionList>",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
