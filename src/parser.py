@@ -78,6 +78,13 @@ class JackParser:
         self.advance()
         return True
 
+    def match_and_write(self, token_type: TokenType, value: str | None = None) -> bool:
+        """Consome com match() e escreve o token no XML quando houver match."""
+        if not self.match(token_type, value):
+            return False
+        self.write_token(self.previous())
+        return True
+
     def consume(self, token_type: TokenType, value: str | None = None, description: str | None = None) -> Token:
         """Consome um token obrigatório ou lança ParserError."""
         if self.check(token_type, value):
@@ -147,8 +154,7 @@ class JackParser:
         self._compile_type()
         self.consume_and_write(TokenType.IDENTIFIER, description="variable name")
 
-        while self.check(TokenType.SYMBOL, ','):
-            self.consume_and_write(TokenType.SYMBOL, ',')
+        while self.match_and_write(TokenType.SYMBOL, ','):
             self.consume_and_write(TokenType.IDENTIFIER, description="variable name")
 
         self.consume_and_write(TokenType.SYMBOL, ';')
@@ -182,8 +188,7 @@ class JackParser:
             self._compile_type()
             self.consume_and_write(TokenType.IDENTIFIER, description="parameter name")
 
-            while self.check(TokenType.SYMBOL, ','):
-                self.consume_and_write(TokenType.SYMBOL, ',')
+            while self.match_and_write(TokenType.SYMBOL, ','):
                 self._compile_type()
                 self.consume_and_write(TokenType.IDENTIFIER, description="parameter name")
 
@@ -211,8 +216,7 @@ class JackParser:
         self._compile_type()
         self.consume_and_write(TokenType.IDENTIFIER, description="variable name")
 
-        while self.check(TokenType.SYMBOL, ','):
-            self.consume_and_write(TokenType.SYMBOL, ',')
+        while self.match_and_write(TokenType.SYMBOL, ','):
             self.consume_and_write(TokenType.IDENTIFIER, description="variable name")
 
         self.consume_and_write(TokenType.SYMBOL, ';')
@@ -284,8 +288,7 @@ class JackParser:
         self.compile_term()
         
         while self.check(TokenType.SYMBOL) and self.peek().value in '+-*/&|<=>':
-            op_token = self.advance()
-            self.write_token(op_token) 
+            self.match_and_write(TokenType.SYMBOL)
             self.compile_term()
 
     def compile_let(self):
@@ -295,8 +298,7 @@ class JackParser:
         self.consume_and_write(TokenType.KEYWORD, 'let')
         self.consume_and_write(TokenType.IDENTIFIER, description="variable name")
         
-        if self.check(TokenType.SYMBOL, '['):
-            self.consume_and_write(TokenType.SYMBOL, '[')
+        if self.match_and_write(TokenType.SYMBOL, '['):
             self.write_start("expression")
             self.compile_expression()  
             self.write_end("expression")
@@ -325,8 +327,7 @@ class JackParser:
         self.compile_statements()
         self.consume_and_write(TokenType.SYMBOL, '}')
         
-        if self.check(TokenType.KEYWORD, 'else'):
-            self.consume_and_write(TokenType.KEYWORD, 'else')
+        if self.match_and_write(TokenType.KEYWORD, 'else'):
             self.consume_and_write(TokenType.SYMBOL, '{')
             self.compile_statements()
             self.consume_and_write(TokenType.SYMBOL, '}')
@@ -365,8 +366,7 @@ class JackParser:
 
         self.consume_and_write(TokenType.IDENTIFIER)
      
-        if self.check(TokenType.SYMBOL, '.'):
-            self.consume_and_write(TokenType.SYMBOL, '.')
+        if self.match_and_write(TokenType.SYMBOL, '.'):
             self.consume_and_write(TokenType.IDENTIFIER, description="subroutine name")
         
         self.consume_and_write(TokenType.SYMBOL, '(')
@@ -400,12 +400,10 @@ class JackParser:
             raise ParserError("Expected term, found end of input", 
                             *self._eof_position())
         
-        if self.check(TokenType.SYMBOL, '-') or self.check(TokenType.SYMBOL, '~'):
-            self.consume_and_write(TokenType.SYMBOL)
+        if self.match_and_write(TokenType.SYMBOL, '-') or self.match_and_write(TokenType.SYMBOL, '~'):
             self.compile_term()
             
-        elif self.check(TokenType.SYMBOL, '('):
-            self.consume_and_write(TokenType.SYMBOL, '(')
+        elif self.match_and_write(TokenType.SYMBOL, '('):
             self.write_start("expression")
             self.compile_expression()
             self.write_end("expression")
@@ -419,19 +417,16 @@ class JackParser:
             self.consume_and_write(TokenType.KEYWORD)
         
         elif self.check(TokenType.IDENTIFIER):
-            identifier = self.advance()
-            self.write_token(identifier)
+            self.match_and_write(TokenType.IDENTIFIER)
             
-            if self.check(TokenType.SYMBOL, '['):
-                self.consume_and_write(TokenType.SYMBOL, '[')
+            if self.match_and_write(TokenType.SYMBOL, '['):
                 self.write_start("expression")
                 self.compile_expression()
                 self.write_end("expression")
                 self.consume_and_write(TokenType.SYMBOL, ']')
             
             elif self.check(TokenType.SYMBOL, '(') or self.check(TokenType.SYMBOL, '.'):
-                if self.check(TokenType.SYMBOL, '.'):
-                    self.consume_and_write(TokenType.SYMBOL, '.')
+                if self.match_and_write(TokenType.SYMBOL, '.'):
                     self.consume_and_write(TokenType.IDENTIFIER, description="subroutine name")
                 self.consume_and_write(TokenType.SYMBOL, '(')
                 self.compile_expression_list()
@@ -452,8 +447,7 @@ class JackParser:
             self.compile_expression()
             self.write_end("expression")
             
-            while self.check(TokenType.SYMBOL, ','):
-                self.consume_and_write(TokenType.SYMBOL, ',')
+            while self.match_and_write(TokenType.SYMBOL, ','):
                 self.write_start("expression")
                 self.compile_expression()
                 self.write_end("expression")
