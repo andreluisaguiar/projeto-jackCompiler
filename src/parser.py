@@ -325,12 +325,11 @@ class JackParser:
         self.compile_statements()
         self.consume_and_write(TokenType.SYMBOL, '}')
         
-        if self.match(TokenType.KEYWORD, 'else'):
-            self.write_start("elseStatement")
+        if self.check(TokenType.KEYWORD, 'else'):
+            self.consume_and_write(TokenType.KEYWORD, 'else')
             self.consume_and_write(TokenType.SYMBOL, '{')
             self.compile_statements()
             self.consume_and_write(TokenType.SYMBOL, '}')
-            self.write_end("elseStatement")
         
         self.write_end("ifStatement")
 
