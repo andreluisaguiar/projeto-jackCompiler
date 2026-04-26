@@ -46,6 +46,42 @@ projeto-jackCompiler/
 
 ---
 
+## Pipeline do compilador
+
+O projeto executa as etapas da primeira unidade em sequência. O arquivo `.jack` é lido pelo `main.py`, processado pelo módulo `processador.py` e então passa pelo lexer, pelo parser e pela geração do XML final.
+
+```text
+arquivo .jack
+    ↓
+JackLexer
+    ↓
+lista de tokens com tipo, valor, linha e coluna
+    ↓
+JackParser
+    ↓
+árvore sintática em XML
+    ↓
+xml_writer
+    ↓
+arquivo output/NomeDoArquivo.xml
+```
+
+Na prática, o fluxo principal é:
+
+1. `src/lexer.py` remove espaços/comentários e transforma o código Jack em tokens.
+2. `src/parser.py` consome esses tokens com recursive descent, usando métodos como `peek`, `advance`, `match` e `consume`.
+3. O parser escreve a hierarquia sintática exigida pelo nand2tetris, com tags como `<class>`, `<subroutineDec>`, `<statements>`, `<expression>` e `<term>`.
+4. `src/xml_writer.py` salva o XML gerado no caminho de saída.
+
+O modo padrão gera o XML sintático do parser. O modo `--tokens` executa apenas o lexer e gera o XML de tokens, mantido para validar a primeira entrega.
+
+```text
+Modo parser:  SquareGame.jack → output/SquareGame.xml
+Modo tokens:  SquareGame.jack → output/SquareGameT.xml
+```
+
+---
+
 ## Como executar
 
 ### Gerar XML sintático do parser
