@@ -27,8 +27,16 @@ class JackParser:
         self._indent = 0
 
     def parse(self) -> str:
-        """Ponto de entrada futuro do parser completo."""
-        return self.compile_class()
+        """Executa o parser completo a partir da regra class."""
+        self.compile_class()
+        if not self.is_at_end():
+            token = self.peek()
+            raise ParserError(
+                f"Unexpected token after class: {token.value}",
+                token.line,
+                token.column,
+            )
+        return self.output()
 
     def peek(self, offset: int = 0) -> Token | None:
         """Retorna o token atual sem consumir."""
@@ -111,22 +119,122 @@ class JackParser:
         return "\n".join(self._lines)
 
     def compile_class(self) -> str:
-        raise NotImplementedError("compile_class sera implementado na proxima etapa")
+        """class: 'class' className '{' classVarDec* subroutineDec* '}'"""
+        self.write_start("class")
+
+        self.consume_and_write(TokenType.KEYWORD, 'class')
+        self.consume_and_write(TokenType.IDENTIFIER, description="class name")
+        self.consume_and_write(TokenType.SYMBOL, '{')
+
+        while self.check(TokenType.KEYWORD) and self.peek().value in ('static', 'field'):
+            self.compile_class_var_dec()
+
+        while self.check(TokenType.KEYWORD) and self.peek().value in ('constructor', 'function', 'method'):
+            self.compile_subroutine_dec()
+
+        self.consume_and_write(TokenType.SYMBOL, '}')
+        self.write_end("class")
 
     def compile_class_var_dec(self):
-        raise NotImplementedError("compile_class_var_dec sera implementado na proxima etapa")
+        """classVarDec: ('static' | 'field') type varName (',' varName)* ';'"""
+        self.write_start("classVarDec")
+
+        if not (self.check(TokenType.KEYWORD, 'static') or self.check(TokenType.KEYWORD, 'field')):
+            token = self.peek()
+            raise ParserError("Expected class variable declaration", token.line, token.column)
+
+        self.consume_and_write(TokenType.KEYWORD)
+        self._compile_type()
+        self.consume_and_write(TokenType.IDENTIFIER, description="variable name")
+
+        while self.check(TokenType.SYMBOL, ','):
+            self.consume_and_write(TokenType.SYMBOL, ',')
+            self.consume_and_write(TokenType.IDENTIFIER, description="variable name")
+
+        self.consume_and_write(TokenType.SYMBOL, ';')
+        self.write_end("classVarDec")
 
     def compile_subroutine_dec(self):
-        raise NotImplementedError("compile_subroutine_dec sera implementado na proxima etapa")
+        """subroutineDec: ('constructor' | 'function' | 'method') ('void' | type)
+        subroutineName '(' parameterList ')' subroutineBody
+        """
+        self.write_start("subroutineDec")
+
+        if not self.check(TokenType.KEYWORD) or self.peek().value not in ('constructor', 'function', 'method'):
+            token = self.peek()
+            raise ParserError("Expected subroutine declaration", token.line, token.column)
+
+        self.consume_and_write(TokenType.KEYWORD)
+        self._compile_return_type()
+        self.consume_and_write(TokenType.IDENTIFIER, description="subroutine name")
+        self.consume_and_write(TokenType.SYMBOL, '(')
+        self.compile_parameter_list()
+        self.consume_and_write(TokenType.SYMBOL, ')')
+        self.compile_subroutine_body()
+
+        self.write_end("subroutineDec")
 
     def compile_parameter_list(self):
-        raise NotImplementedError("compile_parameter_list sera implementado na proxima etapa")
+        """parameterList: ((type varName) (',' type varName)*)?"""
+        self.write_start("parameterList")
+
+        if not self.check(TokenType.SYMBOL, ')'):
+            self._compile_type()
+            self.consume_and_write(TokenType.IDENTIFIER, description="parameter name")
+
+            while self.check(TokenType.SYMBOL, ','):
+                self.consume_and_write(TokenType.SYMBOL, ',')
+                self._compile_type()
+                self.consume_and_write(TokenType.IDENTIFIER, description="parameter name")
+
+        self.write_end("parameterList")
 
     def compile_subroutine_body(self):
-        raise NotImplementedError("compile_subroutine_body sera implementado na proxima etapa")
+        """subroutineBody: '{' varDec* statements '}'"""
+        self.write_start("subroutineBody")
+
+        self.consume_and_write(TokenType.SYMBOL, '{')
+
+        while self.check(TokenType.KEYWORD, 'var'):
+            self.compile_var_dec()
+
+        self.compile_statements()
+        self.consume_and_write(TokenType.SYMBOL, '}')
+
+        self.write_end("subroutineBody")
 
     def compile_var_dec(self):
-        raise NotImplementedError("compile_var_dec sera implementado na proxima etapa")
+        """varDec: 'var' type varName (',' varName)* ';'"""
+        self.write_start("varDec")
+
+        self.consume_and_write(TokenType.KEYWORD, 'var')
+        self._compile_type()
+        self.consume_and_write(TokenType.IDENTIFIER, description="variable name")
+
+        while self.check(TokenType.SYMBOL, ','):
+            self.consume_and_write(TokenType.SYMBOL, ',')
+            self.consume_and_write(TokenType.IDENTIFIER, description="variable name")
+
+        self.consume_and_write(TokenType.SYMBOL, ';')
+        self.write_end("varDec")
+
+    def _compile_type(self):
+        if self.check(TokenType.KEYWORD) and self.peek().value in ('int', 'char', 'boolean'):
+            self.consume_and_write(TokenType.KEYWORD)
+        elif self.check(TokenType.IDENTIFIER):
+            self.consume_and_write(TokenType.IDENTIFIER, description="class name")
+        else:
+            token = self.peek()
+            if token is None:
+                line, column = self._eof_position()
+                raise ParserError("Expected type, found end of input", line, column)
+            raise ParserError(f"Expected type, found {token.value}", token.line, token.column)
+
+    def _compile_return_type(self):
+        if self.check(TokenType.KEYWORD, 'void'):
+            self.consume_and_write(TokenType.KEYWORD, 'void')
+        else:
+            self._compile_type()
 
     def _write_line(self, line: str):
         self._lines.append("  " * self._indent + line)
