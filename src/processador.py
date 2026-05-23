@@ -3,6 +3,7 @@
 from pathlib import Path
 from src.lexer import JackLexer
 from src.parser import JackParser
+from src.vm_compiler import compilar_codigo_jack
 from src.xml_writer import escrever_xml
 
 
@@ -67,6 +68,45 @@ def _tokenizar(codigo_fonte: str):
     lexer = JackLexer(codigo_fonte)
     tokens = lexer.tokenize()
     return lexer, tokens
+
+
+def compilar_arquivo_jack(caminho_entrada: str, caminho_saida: str | Path | None = None):
+    """
+    Compila um arquivo .jack e gera codigo VM.
+
+    Se caminho_saida for None, usa a convencao Foo.jack -> Foo.vm ao lado do
+    arquivo de entrada.
+    """
+    codigo_fonte = _ler_codigo_fonte(caminho_entrada)
+    conteudo_vm = compilar_codigo_jack(codigo_fonte)
+
+    if caminho_saida is None:
+        caminho_saida = calcular_caminho_saida_vm(caminho_entrada)
+
+    caminho_saida = Path(caminho_saida)
+    caminho_saida.parent.mkdir(parents=True, exist_ok=True)
+    conteudo = conteudo_vm
+    if conteudo:
+        conteudo += "\n"
+    caminho_saida.write_text(conteudo, encoding="utf-8")
+    print(f"Gerado: {caminho_saida}")
+
+    return str(caminho_saida)
+
+
+def compilar_entrada(caminho_entrada: str, pasta_saida: str | Path | None = None) -> list[str]:
+    """
+    Compila uma entrada que pode ser arquivo .jack ou diretorio com arquivos .jack.
+    """
+    arquivos = resolver_arquivos_jack(caminho_entrada)
+    raiz = Path(caminho_entrada)
+    caminhos_gerados = []
+
+    for arquivo in arquivos:
+        caminho_saida = calcular_caminho_saida_vm(arquivo, raiz, pasta_saida)
+        caminhos_gerados.append(compilar_arquivo_jack(str(arquivo), caminho_saida))
+
+    return caminhos_gerados
 
 
 def processar_arquivo_jack(caminho_entrada: str, caminho_saida: str = None):
