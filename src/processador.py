@@ -6,6 +6,58 @@ from src.parser import JackParser
 from src.xml_writer import escrever_xml
 
 
+def resolver_arquivos_jack(caminho_entrada: str) -> list[Path]:
+    """
+    Resolve uma entrada do compilador para uma lista ordenada de arquivos .jack.
+
+    A entrada pode ser um arquivo unico ou um diretorio. Diretorios sao lidos de
+    forma recursiva para permitir projetos com subpastas.
+    """
+    entrada = Path(caminho_entrada)
+
+    if entrada.is_file():
+        if entrada.suffix.lower() != ".jack":
+            raise ValueError(f"Arquivo de entrada nao e .jack: {entrada}")
+        return [entrada]
+
+    if entrada.is_dir():
+        arquivos = sorted(entrada.rglob("*.jack"))
+        if not arquivos:
+            raise ValueError(f"Nenhum arquivo .jack encontrado em: {entrada}")
+        return arquivos
+
+    raise FileNotFoundError(caminho_entrada)
+
+
+def calcular_caminho_saida_vm(
+    arquivo_jack: str | Path,
+    raiz_entrada: str | Path | None = None,
+    pasta_saida: str | Path | None = None,
+) -> Path:
+    """
+    Calcula o caminho .vm de saida para um arquivo .jack.
+
+    Sem pasta_saida, o .vm fica ao lado do .jack. Com pasta_saida, preserva a
+    estrutura relativa quando a entrada original for um diretorio.
+    """
+    arquivo = Path(arquivo_jack)
+
+    if pasta_saida is None:
+        return arquivo.with_suffix(".vm")
+
+    base_saida = Path(pasta_saida)
+    if raiz_entrada is None:
+        relativo = Path(arquivo.name)
+    else:
+        raiz = Path(raiz_entrada)
+        if raiz.is_file():
+            relativo = Path(arquivo.name)
+        else:
+            relativo = arquivo.relative_to(raiz)
+
+    return base_saida / relativo.with_suffix(".vm")
+
+
 def _ler_codigo_fonte(caminho_entrada: str) -> str:
     with open(caminho_entrada, 'r', encoding='utf-8') as arquivo:
         return arquivo.read()
