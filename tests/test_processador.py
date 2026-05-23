@@ -6,7 +6,12 @@ from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from src.processador import processar_arquivo_jack, tokenizar_arquivo_jack
+from src.processador import (
+    calcular_caminho_saida_vm,
+    processar_arquivo_jack,
+    resolver_arquivos_jack,
+    tokenizar_arquivo_jack,
+)
 
 
 def normalize_xml(content: str) -> str:
@@ -48,6 +53,53 @@ class TestProcessadorJack(unittest.TestCase):
             conteudo = saida.read_text(encoding="utf-8")
             self.assertTrue(conteudo.startswith("<tokens>"))
             self.assertIn("<keyword> class </keyword>", conteudo)
+
+    def test_resolve_arquivos_jack_em_diretorio_recursivo(self):
+        with TemporaryDirectory() as temp_dir:
+            base_dir = Path(temp_dir)
+            sub_dir = base_dir / "sub"
+            sub_dir.mkdir()
+            primeiro = base_dir / "Main.jack"
+            segundo = sub_dir / "Helper.jack"
+            ignorado = base_dir / "notes.txt"
+
+            primeiro.write_text("class Main {}", encoding="utf-8")
+            segundo.write_text("class Helper {}", encoding="utf-8")
+            ignorado.write_text("nao entra", encoding="utf-8")
+
+            self.assertEqual(
+                resolver_arquivos_jack(str(base_dir)),
+                [primeiro, segundo],
+            )
+
+    def test_resolve_arquivo_jack_unico(self):
+        with TemporaryDirectory() as temp_dir:
+            arquivo = Path(temp_dir) / "Main.jack"
+            arquivo.write_text("class Main {}", encoding="utf-8")
+
+            self.assertEqual(resolver_arquivos_jack(str(arquivo)), [arquivo])
+
+    def test_erro_quando_diretorio_nao_tem_jack(self):
+        with TemporaryDirectory() as temp_dir:
+            with self.assertRaises(ValueError):
+                resolver_arquivos_jack(temp_dir)
+
+    def test_calcula_saida_vm_ao_lado_do_arquivo(self):
+        entrada = Path("Project") / "Main.jack"
+
+        self.assertEqual(
+            calcular_caminho_saida_vm(entrada),
+            Path("Project") / "Main.vm",
+        )
+
+    def test_calcula_saida_vm_preservando_estrutura_relativa(self):
+        raiz = Path("Project")
+        entrada = raiz / "sub" / "Helper.jack"
+
+        self.assertEqual(
+            calcular_caminho_saida_vm(entrada, raiz, "output"),
+            Path("output") / "sub" / "Helper.vm",
+        )
 
 
 if __name__ == "__main__":
