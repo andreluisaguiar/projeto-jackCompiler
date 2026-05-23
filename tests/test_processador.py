@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 
 from src.processador import (
     calcular_caminho_saida_vm,
+    compilar_entrada,
     processar_arquivo_jack,
     resolver_arquivos_jack,
     tokenizar_arquivo_jack,
@@ -100,6 +101,47 @@ class TestProcessadorJack(unittest.TestCase):
             calcular_caminho_saida_vm(entrada, raiz, "output"),
             Path("output") / "sub" / "Helper.vm",
         )
+
+    def test_compila_entrada_diretorio_e_gera_multiplos_vm(self):
+        with TemporaryDirectory() as temp_dir:
+            base_dir = Path(temp_dir) / "Project"
+            sub_dir = base_dir / "sub"
+            output_dir = Path(temp_dir) / "out"
+            sub_dir.mkdir(parents=True)
+
+            (base_dir / "Main.jack").write_text(
+                """
+                class Main {
+                   function void main() {
+                      return;
+                   }
+                }
+                """,
+                encoding="utf-8",
+            )
+            (sub_dir / "Helper.jack").write_text(
+                """
+                class Helper {
+                   function int value() {
+                      return 1;
+                   }
+                }
+                """,
+                encoding="utf-8",
+            )
+
+            with redirect_stdout(StringIO()):
+                caminhos = compilar_entrada(str(base_dir), output_dir)
+
+            self.assertEqual(
+                caminhos,
+                [
+                    str(output_dir / "Main.vm"),
+                    str(output_dir / "sub" / "Helper.vm"),
+                ],
+            )
+            self.assertTrue((output_dir / "Main.vm").exists())
+            self.assertTrue((output_dir / "sub" / "Helper.vm").exists())
 
 
 if __name__ == "__main__":
