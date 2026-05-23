@@ -44,6 +44,24 @@ class TestVMWriter(unittest.TestCase):
         with self.assertRaises(ValueError):
             writer.write_push("invalid", 0)
 
+    def test_rejeita_pop_constant(self):
+        writer = VMWriter()
+
+        with self.assertRaises(ValueError):
+            writer.write_pop("constant", 0)
+
+    def test_rejeita_comando_aritmetico_invalido(self):
+        writer = VMWriter()
+
+        with self.assertRaises(ValueError):
+            writer.write_arithmetic("multiply")
+
+    def test_rejeita_nome_vazio(self):
+        writer = VMWriter()
+
+        with self.assertRaises(ValueError):
+            writer.write_label("")
+
     def test_salva_arquivo_vm(self):
         writer = VMWriter()
         writer.write_push("constant", 7)

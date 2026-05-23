@@ -50,19 +50,24 @@ class VMWriter:
         self._write(command)
 
     def write_label(self, label: str):
+        self._validate_name(label, "rotulo")
         self._write(f"label {label}")
 
     def write_goto(self, label: str):
+        self._validate_name(label, "rotulo")
         self._write(f"goto {label}")
 
     def write_if(self, label: str):
+        self._validate_name(label, "rotulo")
         self._write(f"if-goto {label}")
 
     def write_call(self, name: str, n_args: int):
+        self._validate_name(name, "subrotina")
         self._validate_index(n_args)
         self._write(f"call {name} {n_args}")
 
     def write_function(self, name: str, n_locals: int):
+        self._validate_name(name, "funcao")
         self._validate_index(n_locals)
         self._write(f"function {name} {n_locals}")
 
@@ -90,3 +95,7 @@ class VMWriter:
     def _validate_index(self, index: int):
         if not isinstance(index, int) or index < 0:
             raise ValueError(f"Indice VM invalido: {index}")
+
+    def _validate_name(self, name: str, description: str):
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError(f"Nome de {description} invalido: {name!r}")
