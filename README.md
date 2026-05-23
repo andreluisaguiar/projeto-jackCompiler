@@ -1,8 +1,8 @@
-# JackCompiler - Scanner e Parser Jack
+# JackCompiler - Gerador de Código Intermediário VM
 
-### Projeto do módulo I da disciplina de Compiladores - Engenharia da Computação/UFMA
+### Projeto da disciplina de Compiladores - Engenharia da Computação/UFMA
 
-Implementação do analisador léxico e do analisador sintático para a linguagem Jack, do projeto nand2tetris.
+Compilador para a linguagem Jack, do projeto nand2tetris. O projeto agora integra scanner, parser, geração XML de validação e geração de código intermediário `.vm`, compatível com o VM Emulator oficial.
 
 ## Dupla
 
@@ -11,14 +11,11 @@ Implementação do analisador léxico e do analisador sintático para a linguage
 | André Luis Aguiar do Nascimento | 20250071151 |
 | Virginia Maria Mondego Ferreira | 20250071349 |
 
----
-
 ## Linguagem utilizada
 
 - Python 3.10+
 - Sem dependências externas
-
----
+- Testes com `unittest`
 
 ## Estrutura do projeto
 
@@ -26,101 +23,90 @@ Implementação do analisador léxico e do analisador sintático para a linguage
 projeto-jackCompiler/
 ├── main.py
 ├── src/
-│   ├── __init__.py
 │   ├── lexer.py          # Analisador léxico JackLexer
-│   ├── parser.py         # Parser recursive descent JackParser
-│   ├── processador.py    # Integra lexer + parser
+│   ├── parser.py         # Parser XML recursive descent
+│   ├── processador.py    # Orquestra arquivo/diretório e saídas
+│   ├── vm_compiler.py    # Gerador Jack -> VM
+│   ├── vm_writer.py      # Escritor de comandos VM
 │   └── xml_writer.py     # Escrita dos arquivos XML
 ├── tests/
 │   ├── test_lexer.py
-│   ├── test_parser_helpers.py
-│   ├── test_parser_erro.py
-│   ├── test_parser_of.py
-│   └── test_processador.py
-├── Square/
-│   ├── Main.jack, Square.jack, SquareGame.jack
-│   ├── Main.xml, Square.xml, SquareGame.xml
-│   └── MainT.xml, SquareT.xml, SquareGameT.xml
-└── output/
+│   ├── test_parser_*.py
+│   ├── test_processador.py
+│   ├── test_vm_compiler.py
+│   └── test_vm_writer.py
+└── Square/
+    ├── Main.jack
+    ├── Square.jack
+    └── SquareGame.jack
 ```
-
----
 
 ## Pipeline do compilador
 
-O projeto executa as etapas da primeira unidade em sequência. O arquivo `.jack` é lido pelo `main.py`, processado pelo módulo `processador.py` e então passa pelo lexer, pelo parser e pela geração do XML final.
+O modo padrão gera código VM:
 
 ```text
-arquivo .jack
+arquivo .jack ou diretório
     ↓
 JackLexer
     ↓
-lista de tokens com tipo, valor, linha e coluna
+tokens Jack
     ↓
-JackParser
+JackVMCompiler
     ↓
-árvore sintática em XML
+VMWriter
     ↓
-xml_writer
-    ↓
-arquivo output/NomeDoArquivo.xml
+arquivo .vm
 ```
 
-Na prática, o fluxo principal é:
+Os modos de validação das entregas anteriores continuam disponíveis:
 
-1. `src/lexer.py` remove espaços/comentários e transforma o código Jack em tokens.
-2. `src/parser.py` consome esses tokens com recursive descent, usando métodos como `peek`, `advance`, `match` e `consume`.
-3. O parser escreve a hierarquia sintática exigida pelo nand2tetris, com tags como `<class>`, `<subroutineDec>`, `<statements>`, `<expression>` e `<term>`.
-4. `src/xml_writer.py` salva o XML gerado no caminho de saída.
-
-O modo padrão gera o XML sintático do parser. O modo `--tokens` executa apenas o lexer e gera o XML de tokens, mantido para validar a primeira entrega.
-
-```text
-Modo parser:  SquareGame.jack → output/SquareGame.xml
-Modo tokens:  SquareGame.jack → output/SquareGameT.xml
-```
-
----
+- `--xml`: gera XML sintático.
+- `--tokens`: gera XML de tokens.
 
 ## Como executar
 
-### Gerar XML sintático do parser
-
-Por padrão, o programa executa scanner + parser e gera a árvore sintática.
+### Compilar arquivo único para VM
 
 ```bash
+python3 main.py Main.jack
 python3 main.py Square/Main.jack
-python3 main.py Square/Square.jack
-python3 main.py Square/SquareGame.jack
 ```
 
-Os arquivos gerados serão salvos em `output/`:
+Sem `--out`, o arquivo `.vm` é gerado ao lado do `.jack`:
 
 ```text
-output/Main.xml
-output/Square.xml
-output/SquareGame.xml
+Square/Main.jack -> Square/Main.vm
 ```
 
-Também é possível informar o caminho de saída:
+### Compilar diretório inteiro para VM
 
 ```bash
-python3 main.py Square/Main.jack output/Main.xml
+python3 main.py ./projects/11/Square/
+python3 main.py ./projects/11/Pong/
 ```
 
-Nome do arquivo de saída XML do parser: `NomeDoArquivo.xml`.
+Ao receber uma pasta, o compilador procura arquivos `.jack` recursivamente e gera um `.vm` para cada classe.
 
-### Gerar XML de tokens do scanner
+### Usar diretório de saída configurável
 
-Para validar apenas o analisador léxico, use `--tokens`:
+```bash
+python3 main.py ./projects/11/Pong/ --out output/project11
+```
+
+Com `--out`, a estrutura relativa da entrada é preservada dentro da pasta de saída.
+
+### Gerar XML sintático
+
+```bash
+python3 main.py --xml Square/Main.jack output/Main.xml
+```
+
+### Gerar XML de tokens
 
 ```bash
 python3 main.py --tokens Square/Main.jack output/MainT.xml
 ```
-
-Nome do arquivo de saída XML do scanner: `NomeDoArquivoT.xml`.
-
----
 
 ## Como validar
 
@@ -130,36 +116,65 @@ Nome do arquivo de saída XML do scanner: `NomeDoArquivoT.xml`.
 python3 -m unittest discover -s tests -v
 ```
 
-Os testes comparam a saída sintática gerada com os XMLs oficiais:
+Os testes cobrem:
 
-- `Square/Main.jack` → `Square/Main.xml`
-- `Square/Square.jack` → `Square/Square.xml`
-- `Square/SquareGame.jack` → `Square/SquareGame.xml`
+- lexer e parser XML já existentes;
+- descoberta de arquivos `.jack` em diretórios;
+- cálculo de saída `.vm`;
+- comandos básicos do `VMWriter`;
+- geração VM inicial para `do`, `return`, `let`, `if/else` e `while`.
 
-Status atual da validação: os três arquivos oficiais passam nos testes automatizados.
+### Validação incremental recomendada
 
-### Comparação manual
+Depois de extrair o pacote oficial do Project 11, valide nesta ordem:
 
 ```bash
-python3 main.py Square/Main.jack output/Main.xml
-diff -w Square/Main.xml output/Main.xml
+python3 main.py ./projects/11/Seven/
+python3 main.py ./projects/11/Average/
+python3 main.py ./projects/11/ConvertToBin/
+python3 main.py ./projects/11/ComplexArrays/
+python3 main.py ./projects/11/Square/
+python3 main.py ./projects/11/Pong/
 ```
 
-No Windows/PowerShell:
+Em seguida, carregue os arquivos `.vm` gerados no VM Emulator oficial.
 
-```powershell
-python main.py Square/Main.jack output/Main.xml
-fc.exe /L Square\Main.xml output\Main.xml
-```
+Status atual:
 
----
+- Testes automatizados locais: passando.
+- Compilação de diretório testada com `Square/`: gera `Main.vm`, `Square.vm` e `SquareGame.vm`.
+- Validação completa no VM Emulator com o pacote oficial Project 11: pendente quando os arquivos oficiais forem adicionados ao ambiente.
 
 ## Decisões técnicas
 
-O parser foi implementado com recursive descent, usando um método `compile_*` para cada não-terminal relevante da gramática Jack. O lexer foi mantido como etapa inicial do fluxo e agora os tokens carregam linha e coluna, permitindo mensagens de erro sintático mais claras.
+O projeto manteve o lexer e o parser XML das entregas anteriores para reduzir risco de regressão. A geração VM foi adicionada em uma nova compilation engine (`JackVMCompiler`), que reaproveita os tokens do `JackLexer` e emite comandos pelo `VMWriter`.
 
-A geração XML segue a estrutura esperada pelo nand2tetris. Um cuidado importante foi escrever no XML todos os símbolos consumidos durante o parsing, como `.`, `[`, `]`, `(`, `)`, `,` e os operadores. Outro ponto de atenção foi o `else`, que no XML oficial aparece como keyword dentro de `ifStatement`, sem uma tag extra.
+A entrada por diretório fica centralizada em `processador.py`, usando `Path.rglob("*.jack")` para compilação recursiva e ordenada. Isso permite compilar projetos com múltiplas classes, como `Square` e `Pong`, com um único comando.
+
+Os rótulos de controle usam nomes previsíveis por subrotina:
+
+```text
+WHILE_EXP0
+WHILE_END0
+IF_TRUE0
+IF_FALSE0
+IF_END0
+```
+
+## Roteiro curto para o vídeo
+
+1. Apresentar integrantes, nomes e matrículas.
+2. Mostrar `main.py`, `src/processador.py`, `src/vm_writer.py` e `src/vm_compiler.py`.
+3. Executar compilação de diretório:
+
+   ```bash
+   python3 main.py ./projects/11/Square/
+   ```
+
+4. Mostrar os arquivos `.vm` gerados.
+5. Carregar o diretório no VM Emulator e demonstrar a execução.
+6. Explicar uma decisão técnica: descoberta recursiva de `.jack`, rótulos únicos ou descarte de retorno em comandos `do`.
 
 ## Desafios enfrentados
 
-Os principais desafios foram integrar o parser sem quebrar o scanner já existente, reproduzir exatamente a hierarquia XML oficial e identificar diferenças sutis causadas por tokens consumidos sem escrita no XML. Também foi necessário separar a saída de tokens (`T.xml`) da saída sintática (`.xml`) para manter as duas validações disponíveis.
+O principal desafio foi evoluir o projeto de uma saída XML de validação para uma saída executável em VM sem quebrar os testes anteriores. Também foi necessário separar claramente os modos da CLI: VM por padrão, XML sintático com `--xml` e XML de tokens com `--tokens`.
