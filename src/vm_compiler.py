@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from src.lexer import JackLexer, Token, TokenType
 from src.parser import ParserError
 from src.vm_writer import VMWriter
+from src.symbol_table import SymbolTable
 
 
 @dataclass
@@ -44,10 +45,9 @@ class JackVMCompiler:
         self._current = 0
         self._writer = VMWriter()
         self._class_name = ""
-        self._class_scope: dict[str, Symbol] = {}
-        self._subroutine_scope: dict[str, Symbol] = {}
-        self._class_counts = {"static": 0, "field": 0}
-        self._subroutine_counts = {"arg": 0, "var": 0}
+        from src.symbol_table import SymbolTable
+        self._symbol_table = SymbolTable()
+        
         self._label_counts: dict[str, int] = {}
         self._current_subroutine_kind = ""
 
@@ -448,36 +448,26 @@ class JackVMCompiler:
             self._writer.write_push("pointer", 0)
 
     def _start_subroutine(self, subroutine_kind: str):
-        self._subroutine_scope = {}
-        self._subroutine_counts = {"arg": 0, "var": 0}
+        self._symbol_table.start_subroutine()
         self._label_counts = {}
         self._current_subroutine_kind = subroutine_kind
 
     def _define(self, name: str, type_name: str, kind: str):
-        if kind in ("static", "field"):
-            index = self._class_counts[kind]
-            self._class_counts[kind] += 1
-            self._class_scope[name] = Symbol(type_name, kind, index)
-        elif kind in ("arg", "var"):
-            index = self._subroutine_counts[kind]
-            self._subroutine_counts[kind] += 1
-            self._subroutine_scope[name] = Symbol(type_name, kind, index)
-        else:
-            raise ValueError(f"Tipo de simbolo invalido: {kind}")
+        self._symbol_table.define(name, type_name, kind)
 
-    def _resolve_symbol(self, name: str) -> Symbol | None:
-        if name in self._subroutine_scope:
-            return self._subroutine_scope[name]
-        return self._class_scope.get(name)
-
+    def _resolve_symbol(self, name: str):
+        return self._symbol_table.lookup(name)
+    
     def _write_push_symbol(self, name: str):
         symbol = self._require_symbol(name)
-        self._writer.write_push(self.KIND_TO_SEGMENT[symbol.kind], symbol.index)
+        segment = self._symbol_table.segment_of(name)
+        self._writer.write_push(segment, symbol.index)
 
     def _write_pop_symbol(self, name: str):
         symbol = self._require_symbol(name)
-        self._writer.write_pop(self.KIND_TO_SEGMENT[symbol.kind], symbol.index)
-
+        segment = self._symbol_table.segment_of(name)
+        self._writer.write_pop(segment, symbol.index)
+        
     def _require_symbol(self, name: str) -> Symbol:
         symbol = self._resolve_symbol(name)
         if symbol is None:
