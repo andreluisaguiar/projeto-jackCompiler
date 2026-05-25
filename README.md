@@ -161,20 +161,6 @@ IF_FALSE0
 IF_END0
 ```
 
-## Roteiro curto para o vídeo
-
-1. Apresentar integrantes, nomes e matrículas.
-2. Mostrar `main.py`, `src/processador.py`, `src/vm_writer.py` e `src/vm_compiler.py`.
-3. Executar compilação de diretório:
-
-   ```bash
-   python3 main.py ./projects/11/Square/
-   ```
-
-4. Mostrar os arquivos `.vm` gerados.
-5. Carregar o diretório no VM Emulator e demonstrar a execução.
-6. Explicar uma decisão técnica: descoberta recursiva de `.jack`, rótulos únicos ou descarte de retorno em comandos `do`.
-
 ## Desafios enfrentados
 
 O principal desafio foi evoluir o projeto de uma saída XML de validação para uma saída executável em VM sem quebrar os testes anteriores. Também foi necessário separar claramente os modos da CLI: VM por padrão, XML sintático com `--xml` e XML de tokens com `--tokens`.
