@@ -185,10 +185,12 @@ class JackVMCompiler:
             self.compile_var_dec()
 
         function_name = f"{self._class_name}.{subroutine_name}"
-        self._writer.write_function(function_name, self._subroutine_counts["var"])
+        n_locals = self._symbol_table.var_count("var")
+        self._writer.write_function(function_name, n_locals)
 
         if subroutine_kind == "constructor":
-            self._writer.write_push("constant", self._class_counts["field"])
+            n_fields = self._symbol_table.var_count("field")
+            self._writer.write_push("constant", n_fields)
             self._writer.write_call("Memory.alloc", 1)
             self._writer.write_pop("pointer", 0)
         elif subroutine_kind == "method":
@@ -467,7 +469,7 @@ class JackVMCompiler:
         symbol = self._require_symbol(name)
         segment = self._symbol_table.segment_of(name)
         self._writer.write_pop(segment, symbol.index)
-        
+
     def _require_symbol(self, name: str) -> Symbol:
         symbol = self._resolve_symbol(name)
         if symbol is None:
