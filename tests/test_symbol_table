@@ -1,0 +1,53 @@
+import unittest
+from src.symbol_table import SymbolTable
+
+class TestSymbolTable(unittest.TestCase):
+    def setUp(self):
+        self.table = SymbolTable()
+
+    def test_escopo_class_e_subrotina(self):
+        self.table.define("sub_var", "int", "static")
+        self.table.define("field_var", "char", "field")
+        
+        self.assertEqual(self.table.var_count("static"), 1)
+        self.assertEqual(self.table.var_count("field"), 1)
+        
+        self.table.start_subroutine()
+        self.table.define("arg_var", "boolean", "arg")
+        self.table.define("local_var", "int", "var")
+        
+        self.assertEqual(self.table.var_count("arg"), 1)
+        self.assertEqual(self.table.var_count("var"), 1)
+        self.assertEqual(self.table.var_count("static"), 1)
+
+    def test_lookup_e_propriedades(self):
+        self.table.define("g_var", "int", "static")
+        self.table.start_subroutine()
+        self.table.define("l_var", "char", "var")
+        
+        self.assertEqual(self.table.type_of("g_var"), "int")
+        self.assertEqual(self.table.kind_of("g_var"), "static")
+        self.assertEqual(self.table.index_of("g_var"), 0)
+        self.assertEqual(self.table.segment_of("g_var"), "static")
+        
+        self.assertEqual(self.table.type_of("l_var"), "char")
+        self.assertEqual(self.table.kind_of("l_var"), "var")
+        self.assertEqual(self.table.index_of("l_var"), 0)
+        self.assertEqual(self.table.segment_of("l_var"), "local")
+
+    def test_sombreamento_de_variaveis(self):
+        self.table.define("x", "int", "field")
+        self.assertEqual(self.table.kind_of("x"), "field")
+        
+        self.table.start_subroutine()
+        self.table.define("x", "char", "var")
+        self.assertEqual(self.table.kind_of("x"), "var")
+        self.assertEqual(self.table.type_of("x"), "char")
+
+    def test_identificador_nao_encontrado(self):
+        self.assertIsNone(self.table.kind_of("inexistente"))
+        self.assertIsNone(self.table.type_of("inexistente"))
+        self.assertIsNone(self.table.index_of("inexistente"))
+
+if __name__ == "__main__":
+    unittest.main()
